@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI CV Analyzer</title>
+
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        /* Smooth fade-in */
+        .fade-in {
+            animation: fadeIn 0.8s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px);}
+            to { opacity: 1; transform: translateY(0);}
+        }
+
+        /* Pop animation */
+        .pop {
+            animation: pop 0.5s ease;
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0.85);}
+            100% { transform: scale(1);}
+        }
+    </style>
+</head>
+
+<body class="relative min-h-screen flex flex-col items-center justify-center p-6">
+
+    <!-- 🌌 Background Image -->
+    <div class="fixed inset-0 z-0">
+        <img 
+            src="https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=2070&auto=format&fit=crop"
+            class="w-full h-full object-cover opacity-20"
+        />
+    </div>
+
+    <!-- 🎨 Gradient Overlay -->
+    <div class="fixed inset-0 bg-gradient-to-br from-blue-100/70 via-purple-100/70 to-pink-100/70 z-0"></div>
+
+    <!-- ✨ Floating Icons -->
+    <div class="fixed inset-0 z-0 pointer-events-none">
+        <div class="absolute top-10 left-10 text-3xl animate-bounce opacity-30">💻</div>
+        <div class="absolute top-40 right-20 text-2xl animate-pulse opacity-30">📊</div>
+        <div class="absolute bottom-20 left-20 text-3xl animate-bounce opacity-20">🚀</div>
+        <div class="absolute bottom-40 right-10 text-2xl animate-pulse opacity-20">🧠</div>
+    </div>
+
+    <!-- 🌟 MAIN CONTENT -->
+    <div class="relative z-10 w-full flex flex-col items-center">
+
+        <!-- Title -->
+        <h1 class="text-4xl font-extrabold mb-8 text-gray-800 animate-pulse">
+            🚀 AI CV Analyzer
+        </h1>
+
+        <!-- Upload Card -->
+        <div class="bg-white/90 backdrop-blur-md p-6 rounded-2xl shadow-2xl w-full max-w-md transition hover:scale-105 duration-300 fade-in">
+
+            <input type="file" id="fileInput" 
+                class="mb-4 w-full border p-2 rounded hover:border-blue-400 transition">
+
+            <input 
+                type="text" 
+                id="githubInput"
+                placeholder="GitHub Username"
+                class="mb-4 w-full p-2 border rounded focus:ring-2 focus:ring-blue-400 transition"
+            >
+
+            <button onclick="uploadCV()" 
+                class="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-2 rounded-lg 
+                       hover:from-blue-600 hover:to-purple-700 transition transform hover:scale-105">
+                Analyze CV
+            </button>
+
+            <p id="loading" class="mt-4 hidden text-center text-gray-600 animate-bounce">
+                🔍 Analyzing your CV...
+            </p>
+        </div>
+
+        <!-- Result -->
+        <div id="result" class="mt-10 hidden w-full max-w-xl"></div>
+        <h3 class="mt-5 font-semibold">Career Feedback</h3>
+<p class="mt-2 text-gray-700 whitespace-pre-line">
+    ${data.llm_feedback}
+</p>
+
+    </div>
+
+    <script>
+        async function uploadCV() {
+            const file = document.getElementById("fileInput").files[0];
+            const github = document.getElementById("githubInput").value;
+
+            if (!file) {
+                alert("Please upload a file");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("github", github);
+
+            document.getElementById("loading").classList.remove("hidden");
+
+            try {
+                const response = await fetch("http://127.0.0.1:8000/api/upload-cv/", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const data = await response.json();
+                showResult(data);
+
+            } catch (error) {
+                alert("Error connecting to server");
+                console.error(error);
+            }
+
+            document.getElementById("loading").classList.add("hidden");
+        }
+
+        function animateScore(id, finalScore) {
+            let current = 0;
+            const interval = setInterval(() => {
+                if (current >= finalScore) {
+                    clearInterval(interval);
+                } else {
+                    current++;
+                    document.getElementById(id).innerText = current;
+                }
+            }, 15);
+        }
+
+        function showResult(data) {
+            const resultDiv = document.getElementById("result");
+
+            resultDiv.classList.remove("hidden");
+            resultDiv.classList.add("fade-in");
+
+            resultDiv.innerHTML = `
+    <div class="bg-white/95 backdrop-blur-md p-6 rounded-2xl shadow-2xl pop">
+
+        <h2 class="text-3xl font-bold mb-4 text-center ${data.score > 70 ? 'text-green-600' : 'text-red-500'}">
+            Score: <span id="score">0</span>
+        </h2>
+
+        <h3 class="font-semibold mt-4">Skills</h3>
+        <div class="flex flex-wrap gap-2 mt-2">
+            ${data.skills.map(skill => `
+                <span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm 
+                             hover:scale-110 transition cursor-pointer">
+                    ${skill}
+                </span>
+            `).join("")}
+        </div>
+
+        <h3 class="mt-5 font-semibold">Recommendations</h3>
+        <ul class="list-disc ml-5 mt-2 text-gray-700 space-y-1">
+            ${data.recommendations.map(rec => `
+                <li class="hover:translate-x-1 transition">${rec}</li>
+            `).join("")}
+        </ul>
+
+        ${data.github ? `
+            <h3 class="mt-5 font-semibold">GitHub Stats</h3>
+            <div class="grid grid-cols-2 gap-4 mt-3">
+                <div class="bg-gray-100 p-4 rounded-lg shadow text-center hover:scale-105 transition">
+                    <p class="text-lg font-bold">${data.github.public_repos}</p>
+                    <p class="text-sm text-gray-500">Repos</p>
+                </div>
+
+                <div class="bg-gray-100 p-4 rounded-lg shadow text-center hover:scale-105 transition">
+                    <p class="text-lg font-bold">${data.github.followers}</p>
+                    <p class="text-sm text-gray-500">Followers</p>
+                </div>
+            </div>
+        ` : ""}
+
+        ${data.llm_feedback ? `
+            <h3 class="mt-5 font-semibold">AI Career Feedback</h3>
+            <div class="mt-2 p-4 bg-purple-50 border-l-4 border-purple-400 rounded text-gray-700 whitespace-pre-line">
+                ${data.llm_feedback}
+            </div>
+        ` : ""}
+    </div>
+`;
+
+            animateScore("score", data.score);
+        }
+    </script>
+
+</body>
+</html>
