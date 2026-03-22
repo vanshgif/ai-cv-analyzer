@@ -1,6 +1,4 @@
-import spacy
 
-nlp = spacy.load("en_core_web_sm")
 
 def detect_role(text):
     text = text.lower()
